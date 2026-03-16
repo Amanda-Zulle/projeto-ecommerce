@@ -9,7 +9,7 @@
 }
 
 .modal.is-open {
-    display: block;
+    display: block; 
 }
 
 .modal .container {
