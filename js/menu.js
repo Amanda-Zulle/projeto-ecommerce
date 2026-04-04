@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
     const botaoMenu = document.querySelector(".menu-hamburguer");
     const cabecalho = document.querySelector(".cabecalho");
 

@@ -1,322 +1,167 @@
-
-// Refatoração avançada: código mais robusto, limpo e DRY
-
-document.addEventListener('DOMContentLoaded', () => {
-    const corpoTabela = document.querySelector("#modal-1-content table tbody");
-    inicializarEventosCarrinho();
-    inicializarEventosTabela(corpoTabela);
-    atualizarCarrinhoETabela();
-});
-
-// Inicializa eventos dos botões de adicionar ao carrinho
-function inicializarEventosCarrinho() {
-    document.querySelectorAll(".adicionar-ao-carrinho").forEach(botao => {
-        botao.addEventListener('click', handleAdicionarAoCarrinho);
-    });
-}
-
-// Handler para adicionar produto ao carrinho
-function handleAdicionarAoCarrinho(evento) {
-    const elementoProduto = evento.target.closest(".produto");
-    if (!elementoProduto) return;
-    const produto = extrairDadosProduto(elementoProduto);
-    if (!produto) return;
-    let carrinho = obterProdutosDoCarrinho();
-    const existeProduto = carrinho.find(p => p.id === produto.id);
-    if (existeProduto) {
-        existeProduto.quantidade += 1;
-    } else {
-        carrinho.push(produto);
-    }
-    salvarProdutosNoCarrinho(carrinho);
-    atualizarCarrinhoETabela();
-}
-
-// Extrai dados do produto do DOM, retorna objeto ou null se faltar info
-function extrairDadosProduto(elementoProduto) {
-    // Refatoração: função utilitária para evitar repetição
-    if (!elementoProduto) return null;
-    const produtoId = elementoProduto.dataset.id;
-    const produtoNome = elementoProduto.querySelector(".nome")?.textContent;
-    const produtoImagem = elementoProduto.querySelector("img")?.getAttribute("src");
-    const precoTexto = elementoProduto.querySelector(".preco")?.textContent;
-    if (!produtoId || !produtoNome || !produtoImagem || !precoTexto) return null;
-    const produtoPreco = parseFloat(
-        precoTexto.replace("R$ ", "").replace(/\./g, "").replace(",", ".")
-    );
-    if (isNaN(produtoPreco)) return null;
-    return {
-        id: produtoId,
-        nome: produtoNome,
-        imagem: produtoImagem,
-        preco: produtoPreco,
-        quantidade: 1
-    };
-}
-
-// Inicializa eventos da tabela do carrinho (remover/alterar quantidade)
-function inicializarEventosTabela(corpoTabela) {
-    if (!corpoTabela) return;
-    corpoTabela.addEventListener("click", evento => {
-        if (evento.target.classList.contains("btn-remover")) {
-            removerProdutoDoCarrinho(evento.target.dataset.id);
-        }
-    });
-    corpoTabela.addEventListener("input", evento => {
-        if (evento.target.classList.contains("input-quantidade")) {
-            const novaQuantidade = parseInt(evento.target.value);
-            if (isNaN(novaQuantidade) || novaQuantidade < 1) return;
-            atualizarQuantidadeProduto(evento.target.dataset.id, novaQuantidade);
-        }
-    });
-}
-
-// Atualiza a quantidade de um produto no carrinho
-function atualizarQuantidadeProduto(id, novaQuantidade) {
-    let produtos = obterProdutosDoCarrinho();
-    const produto = produtos.find(produto => produto.id === id);
-    if (produto && novaQuantidade > 0) {
-        produto.quantidade = novaQuantidade;
-        salvarProdutosNoCarrinho(produtos);
-        atualizarCarrinhoETabela();
-    }
-}
-
-// Salva o carrinho no localStorage
-function salvarProdutosNoCarrinho(carrinho) {
-    localStorage.setItem("carrinho", JSON.stringify(carrinho));
-}
-
-// Obtém o carrinho do localStorage
-function obterProdutosDoCarrinho() {
-    try {
-        const produtos = localStorage.getItem("carrinho");
-        return produtos ? JSON.parse(produtos) : [];
-    } catch {
-        return [];
-    }
-}
-
-// Atualiza o contador de itens do carrinho
-function atualizarContadorCarrinho() {
-    const produtos = obterProdutosDoCarrinho();
-    // Uso de reduce para somar quantidades
-    const total = produtos.reduce((soma, produto) => soma + produto.quantidade, 0);
-    const contador = document.getElementById("contador-carrinho");
-    if (contador) contador.textContent = total;
-}
-
-// Renderiza a tabela do carrinho
-function renderizarTabelaDoCarrinho() {
-    const produtos = obterProdutosDoCarrinho();
-    const corpoTabela = document.querySelector("#modal-1-content table tbody");
-    if (!corpoTabela) return;
-    corpoTabela.innerHTML = "";
-    produtos.forEach(produto => {
-        corpoTabela.appendChild(criarLinhaProduto(produto));
-    });
-}
-
-// Cria elemento <tr> para um produto do carrinho
-function criarLinhaProduto(produto) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-        <td class="td-produto"><img src="${produto.imagem}" alt="${produto.nome}"></td>
-        <td>${produto.nome}</td>
-        <td class="td-preco-unitario">R$ ${produto.preco.toFixed(2).replace('.', ',')}</td>
-        <td class="td-quantidade"><input type="number" class="input-quantidade" data-id="${produto.id}" value="${produto.quantidade}" min="1"></td>
-        <td class="td-preco-total">R$ ${(produto.preco * produto.quantidade).toFixed(2).replace('.', ',')}</td>
-        <td><button class="btn-remover" data-id="${produto.id}"></button></td>
-    `;
-    return tr;
-}
-
-// Remove produto do carrinho
-function removerProdutoDoCarrinho(id) {
-    let produtos = obterProdutosDoCarrinho();
-    const produtosAtualizados = produtos.filter(produto => produto.id !== id);
-    salvarProdutosNoCarrinho(produtosAtualizados);
-    atualizarCarrinhoETabela();
-}
-
-// Atualiza o valor total do carrinho
-function atualizarValorTotalDoCarrinho() {
-    const produtos = obterProdutosDoCarrinho();
-    // Uso de reduce para somar valores
-    const valorTotal = produtos.reduce((total, produto) => total + (Number(produto.preco) * produto.quantidade), 0);
-    const totalEl = document.querySelector("#total-carrinho");
-    if (totalEl) {
-        totalEl.textContent = `Total: R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
-    }
-}
-
-// Atualiza todas as partes do carrinho
-function atualizarCarrinhoETabela() {
-    atualizarContadorCarrinho();
-    renderizarTabelaDoCarrinho();
-    atualizarValorTotalDoCarrinho();
-}
-
 /*
-Melhorias desta refatoração:
-1. Função utilitária extrairDadosProduto: evita duplicidade e torna robusto contra campos ausentes.
-2. Early return em funções para evitar aninhamento desnecessário.
-3. Checagem de existência de elementos DOM antes de manipular.
-4. Função criarLinhaProduto separada: facilita manutenção e testes.
-5. Uso de try/catch ao ler localStorage: evita erros caso o storage esteja corrompido.
-6. Comentários detalhados explicando cada melhoria e decisão.
-7. Código mais DRY e seguro para produção.
+Objetivo 1 - quando clicar no botao de adicionar ao carrinho temos que atualizar o contador, adicionar o produto no localStorage e atualizar o html do carrinho
+	parte 1 - vamos adicionar +1 no icone do carrinho
+		passo 1 - pegar os botões de adicionar ao carrinho do html
+		passo 2 - adicionar uma evento de escuta nesses botões pra quando clicar disparar uma ação
+		passo 3 - pega as informações do produto clicado e adicionar no localStorage
+		passo 4 - atualizar o contador do carrinho de compras
+		passo 5 - renderizar a tabela do carrinho de compras
+
+Objetivo 2 - remover produtos do carrinho
+	passo 1  - pegar o botão de deletar do html
+	passo 2 - adicionar evento de escuta no tbody
+	passo 3 - remover o produto do localStorage
+	passo 4 - atualizar o html do carrinho retirando o produto
+
+Objetivo 3 - Atualizar os valores do carrinho
+	passo 1 - adicionar evento de escuta no input do tbody
+	passo 2 - atualizar o valor total do produto
+	passo 3 - atualizar o valor total do carrinho
 */
 
+// Objetivo 1 - quando clicar no botao de adicionar ao carrinho temos que atualizar o contador, adicionar o produto no localStorage e atualizar o html do carrinho
+//     parte 1 - vamos adicionar +1 no icone do carrinho
+//         passo 1 - pegar os botões de adicionar ao carrinho do html
 
-// Refatoração: Modularização e comentários explicativos
+const botoesAdicionarAoCarrinho = document.querySelectorAll(".adicionar-ao-carrinho");
 
-// Utiliza delegação de eventos para melhor performance e menos listeners
-document.addEventListener('DOMContentLoaded', () => {
-    const corpoTabela = document.querySelector("#modal-1-content table tbody");
-    // Adiciona eventos do carrinho
-    inicializarEventosCarrinho();
-    // Adiciona eventos de remover e alterar quantidade
-    inicializarEventosTabela(corpoTabela);
-    // Atualiza o carrinho ao carregar a página
-    atualizarCarrinhoETabela();
+// passo 2 - adicionar uma evento de escuta nesses botões pra quando clicar disparar uma ação
+botoesAdicionarAoCarrinho.forEach(botao => {
+	botao.addEventListener("click", evento => {
+		//passo 3 - pega as informações do produto clicado e adicionar no localStorage
+		const elementoProduto = evento.target.closest(".produto");
+		const produtoId = elementoProduto.dataset.id;
+		const produtoNome = elementoProduto.querySelector(".nome").textContent;
+		const produtoImagem = elementoProduto.querySelector("img").getAttribute("src");
+		const produtoPreco = parseFloat(elementoProduto.querySelector(".preco").textContent.replace("R$ ", "").replace(".", "").replace(",", "."));
+
+		//buscar a lista de produtos do localStorage
+		const carrinho = obterProdutosDoCarrinho();
+		//testar se o produto já existe no carrinho
+		const existeProduto = carrinho.find(produto => produto.id === produtoId);
+
+		//se existe produto, incrementar a quantidade
+		if (existeProduto) {
+			existeProduto.quantidade += 1;
+		} else {
+			//se não existe, adicionar o produto com quantidade 1
+			const produto = {
+				id: produtoId,
+				nome: produtoNome,
+				imagem: produtoImagem,
+				preco: produtoPreco,
+				quantidade: 1,
+			};
+			carrinho.push(produto);
+		}
+
+		salvarProdutosNoCarrinho(carrinho);
+		atualizarCarrinhoETabela();
+	});
 });
 
-// Modularização: Função para inicializar eventos dos botões de adicionar ao carrinho
-function inicializarEventosCarrinho() {
-    const botoesAdicionarAoCarrinho = document.querySelectorAll(".adicionar-ao-carrinho");
-    botoesAdicionarAoCarrinho.forEach(botao => {
-        botao.addEventListener('click', handleAdicionarAoCarrinho);
-    });
-}
-
-// Handler separado para clareza e reuso
-function handleAdicionarAoCarrinho(evento) {
-    const elementoProduto = evento.target.closest(".produto");
-    if (!elementoProduto) return;
-    const produtoId = elementoProduto.dataset.id;
-    const produtoNome = elementoProduto.querySelector(".nome").textContent;
-    const produtoImagem = elementoProduto.querySelector("img").getAttribute("src");
-    const produtoPreco = parseFloat(
-        elementoProduto.querySelector(".preco").textContent
-            .replace("R$ ", "")
-            .replace(".", "")
-            .replace(",", ".")
-    );
-
-    let carrinho = obterProdutosDoCarrinho();
-    const existeProduto = carrinho.find(produto => produto.id === produtoId);
-
-    if (existeProduto) {
-        existeProduto.quantidade += 1;
-    } else {
-        carrinho.push({
-            id: produtoId,
-            nome: produtoNome,
-            imagem: produtoImagem,
-            preco: produtoPreco,
-            quantidade: 1
-        });
-    }
-    salvarProdutosNoCarrinho(carrinho);
-    atualizarCarrinhoETabela();
-}
-
-// Modularização: Função para inicializar eventos da tabela do carrinho
-function inicializarEventosTabela(corpoTabela) {
-    // Remover produto
-    corpoTabela.addEventListener("click", evento => {
-        if (evento.target.classList.contains("btn-remover")) {
-            removerProdutoDoCarrinho(evento.target.dataset.id);
-        }
-    });
-    // Alterar quantidade
-    corpoTabela.addEventListener("input", evento => {
-        if (evento.target.classList.contains("input-quantidade")) {
-            atualizarQuantidadeProduto(evento.target.dataset.id, parseInt(evento.target.value));
-        }
-    });
-}
-
-// Função para atualizar a quantidade de um produto
-function atualizarQuantidadeProduto(id, novaQuantidade) {
-    let produtos = obterProdutosDoCarrinho();
-    const produto = produtos.find(produto => produto.id === id);
-    if (produto && novaQuantidade > 0) {
-        produto.quantidade = novaQuantidade;
-        salvarProdutosNoCarrinho(produtos);
-        atualizarCarrinhoETabela();
-    }
-}
-
-// Salva o carrinho no localStorage
 function salvarProdutosNoCarrinho(carrinho) {
-    localStorage.setItem("carrinho", JSON.stringify(carrinho));
+	localStorage.setItem("carrinho", JSON.stringify(carrinho));
 }
 
-// Obtém o carrinho do localStorage
 function obterProdutosDoCarrinho() {
-    const produtos = localStorage.getItem("carrinho");
-    return produtos ? JSON.parse(produtos) : [];
+	const produtos = localStorage.getItem("carrinho");
+	return produtos ? JSON.parse(produtos) : [];
 }
 
-// Atualiza o contador de itens do carrinho
+//passo 4 - atualizar o contador do carrinho de compras
 function atualizarContadorCarrinho() {
-    const produtos = obterProdutosDoCarrinho();
-    // Refatoração: uso de reduce para somar quantidades
-    const total = produtos.reduce((soma, produto) => soma + produto.quantidade, 0);
-    document.getElementById("contador-carrinho").textContent = total;
+	const produtos = obterProdutosDoCarrinho();
+	let total = 0;
+
+	produtos.forEach(produto => {
+		total += produto.quantidade;
+	});
+
+	document.getElementById("contador-carrinho").textContent = total;
 }
 
-// Renderiza a tabela do carrinho
+
+// Refatoração: função mais enxuta, uso de template string para melhor legibilidade,
+// e uso de map/join para evitar múltiplos reflows do DOM (melhora performance)
 function renderizarTabelaDoCarrinho() {
-    const produtos = obterProdutosDoCarrinho();
-    const corpoTabela = document.querySelector("#modal-1-content table tbody");
-    corpoTabela.innerHTML = "";
-    produtos.forEach(produto => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td class="td-produto"><img src="${produto.imagem}" alt="${produto.nome}"></td>
-            <td>${produto.nome}</td>
-            <td class="td-preco-unitario">R$ ${produto.preco.toFixed(2).replace('.', ',')}</td>
-            <td class="td-quantidade"><input type="number" class="input-quantidade" data-id="${produto.id}" value="${produto.quantidade}" min="1"></td>
-            <td class="td-preco-total">R$ ${(produto.preco * produto.quantidade).toFixed(2).replace('.', ',')}</td>
-            <td><button class="btn-remover" data-id="${produto.id}"></button></td>
-        `;
-        corpoTabela.appendChild(tr);
-    });
+	const produtos = obterProdutosDoCarrinho();
+	const corpoTabela = document.querySelector("#modal-1-content table tbody");
+
+	// Melhoria: gera todo o HTML de uma vez e insere, ao invés de vários appendChild
+	corpoTabela.innerHTML = produtos.map(produto => `
+		<tr>
+			<td class="td-produto">
+				<img src="${produto.imagem}" alt="${produto.nome}" />
+			</td>
+			<td>${produto.nome}</td>
+			<td class="td-preco-unitario">R$ ${produto.preco.toFixed(2).replace('.', ',')}</td>
+			<td class="td-quantidade">
+				<input type="number" class="input-quantidade" data-id="${produto.id}" value="${produto.quantidade}" min="1" />
+			</td>
+			<td class="td-preco-total">R$ ${(produto.preco * produto.quantidade).toFixed(2).replace('.', ',')}</td>
+			<td><button class="btn-remover" data-id="${produto.id}" id="deletar"></button></td>
+		</tr>
+	`).join("");
 }
 
-// Remove produto do carrinho
+// Objetivo 2 - remover produtos do carrinho
+//     passo 1  - pegar o botão de deletar do html
+
+const corpoTabela = document.querySelector("#modal-1-content table tbody");
+
+//passo 2 - adicionar evento de escuta no tbody
+corpoTabela.addEventListener("click", evento => {
+	if (evento.target.classList.contains("btn-remover")) {
+		const id = evento.target.dataset.id;
+		//passo 3 - remover o produto do localStorage
+		removerProdutoDoCarrinho(id);
+	}
+});
+
+//passo 1 - adicionar evento de escuta no input do tbody
+
+// Refatoração: tratamento de quantidade inválida e atualização só se necessário
+corpoTabela.addEventListener("input", evento => {
+	if(evento.target.classList.contains("input-quantidade")){
+		const id = evento.target.dataset.id;
+		let novaQuantidade = parseInt(evento.target.value);
+		if(isNaN(novaQuantidade) || novaQuantidade < 1) {
+			novaQuantidade = 1;
+			evento.target.value = 1; // Melhoria: impede valores inválidos
+		}
+		const produtos = obterProdutosDoCarrinho();
+		const produto = produtos.find(produto => produto.id === id);
+		if(produto && produto.quantidade !== novaQuantidade){
+			produto.quantidade = novaQuantidade;
+			salvarProdutosNoCarrinho(produtos);
+			atualizarCarrinhoETabela();
+		}
+	}
+});
+
+// passo 4 - atualizar o html do carrinho retirando o produto
+
+// Refatoração: função mais enxuta e sem variáveis desnecessárias
 function removerProdutoDoCarrinho(id) {
-    const produtos = obterProdutosDoCarrinho();
-    const produtosAtualizados = produtos.filter(produto => produto.id !== id);
-    salvarProdutosNoCarrinho(produtosAtualizados);
-    atualizarCarrinhoETabela();
+	const carrinhoAtualizado = obterProdutosDoCarrinho().filter(produto => produto.id !== id);
+	salvarProdutosNoCarrinho(carrinhoAtualizado);
+	atualizarCarrinhoETabela();
 }
 
-// Atualiza o valor total do carrinho
-function atualizarValorTotalDoCarrinho() {
-    const produtos = obterProdutosDoCarrinho();
-    // Refatoração: uso de reduce para somar valores
-    const valorTotal = produtos.reduce((total, produto) => total + (Number(produto.preco) * produto.quantidade), 0);
-    document.querySelector("#total-carrinho").textContent =
-        `Total: R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+// passo 3 - atualizar o valor total do carrinho
+
+// Refatoração: uso de reduce para somar total, código mais limpo
+function atualizarValorTotalCarrinho() {
+	const produtos = obterProdutosDoCarrinho();
+	const total = produtos.reduce((soma, produto) => soma + produto.preco * produto.quantidade, 0);
+	document.querySelector("#total-carrinho").textContent = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
 }
 
-// Atualiza todas as partes do carrinho
-function atualizarCarrinhoETabela() {
-    atualizarContadorCarrinho();
-    renderizarTabelaDoCarrinho();
-    atualizarValorTotalDoCarrinho();
+function atualizarCarrinhoETabela(){
+	atualizarContadorCarrinho();
+	renderizarTabelaDoCarrinho();
+	atualizarValorTotalCarrinho();
 }
 
-/*
-Melhorias realizadas:
-1. Modularização: Quebra do código em funções menores e reutilizáveis, facilitando manutenção e testes.
-2. Delegação de eventos: Eventos de remover e alterar quantidade são delegados ao tbody, reduzindo listeners e melhorando performance.
-3. Uso de reduce: Para somar quantidades e valores, tornando o código mais limpo e funcional.
-4. Comentários explicativos: Cada bloco/função tem comentários sobre seu propósito e melhorias.
-5. Handler separado: Função handleAdicionarAoCarrinho separada para clareza e reuso.
-6. DOMContentLoaded: Garante que os elementos existem antes de adicionar eventos.
-*/
+atualizarCarrinhoETabela();

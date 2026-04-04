@@ -28,7 +28,7 @@
 }
 
 .cabecalho ul li a:hover {
-    color: var(--cor-primaria-hover);
+    background-color: var(--cor-primaria-hover);
 }
 
 .cabecalho.menu-ativo .menu-principal {
@@ -69,11 +69,11 @@
 }
 
 .botao-carrinho {
-    background-color: transparent;
-    border: 0;
-    padding: 0.75rem;
-    position: relative;
-    cursor: pointer;
+   background-color: transparent;
+   border: 0;
+   padding: 0.75rem;
+   position: relative;
+   cursor: pointer;
 }
 
 .botao-carrinho span {
@@ -93,7 +93,7 @@
     border-radius: 50%;
 }
 
-@media (min-width: 940px) {
+@media(min-width: 940px) {
     .cabecalho .menu-principal {
         display: block;
         position: static;
@@ -117,7 +117,7 @@
     }
 }
 
-@media (min-width: 1170px) {
+@media(min-width: 1170px) {
     .cabecalho {
         max-width: 1170px;
         margin: 0 auto;

@@ -18,8 +18,8 @@
 }
 
 .rodape nav ul li {
-    margin-bottom: 0.7rem;
-    color: var(--cor-roxa-clara);
+    margin-bottom: 0.7rem; 
+    color: var(--cor-roxa-clara);   
 }
 
 .rodape nav a {
@@ -47,7 +47,7 @@
         width: 100%;
         gap: 13rem;
         padding: 4rem 1rem;
-    }
+    } 
 }
 
 @media(min-width: 1120px) {
@@ -56,4 +56,3 @@
         margin: 0 auto;
     }
 }
-
